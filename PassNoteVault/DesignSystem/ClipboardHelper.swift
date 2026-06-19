@@ -1,0 +1,26 @@
+//
+//  ClipboardHelper.swift
+//  PassNoteVault
+//
+//  Created by siddharth lenka on 19/06/26.
+//
+
+
+import Foundation
+
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
+
+enum ClipboardHelper {
+    static func copy(_ text: String) {
+        #if canImport(UIKit)
+        UIPasteboard.general.string = text
+        #elseif canImport(AppKit)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #endif
+    }
+}

@@ -18,8 +18,11 @@ enum VaultRoute: Hashable {
 }
 
 struct VaultOnboardingCoordinator: View {
+    let onVaultCreated: (_ username: String) -> Void
+
     @StateObject private var setupViewModel = VaultSetupViewModel()
     @State private var path: [VaultRoute] = []
+    @State private var creationErrorMessage: String?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -49,35 +52,21 @@ struct VaultOnboardingCoordinator: View {
                     }
 
                 case .review:
-                    CreateVaultReviewView(viewModel: setupViewModel) {
+                    CreateVaultReviewView(
+                        viewModel: setupViewModel,
+                        errorMessage: creationErrorMessage
+                    ) {
                         createSecureVault()
                     }
 
                 case .firstTimeLogin:
-                    FirstTimeLoginView { username, password, passphrase in
-                        unlockFirstTime(
-                            username: username,
-                            password: password,
-                            passphrase: passphrase
-                        )
+                    FirstTimeLoginView { _, _ in
+                        return "Import backup flow is not connected yet."
                     }
 
                 case .normalUnlock:
-//                    NormalUnlockView(
-//                        username: setupViewModel.username,
-//                        onBiometricUnlock: {
-//                            unlockWithBiometrics()
-//                        },
-//                        onUsePassword: {
-//                            path.append(.firstTimeLogin)
-//                        }
-//                    )
-                    FirstTimeLoginView { username, password, passphrase in
-                        unlockFirstTime(
-                            username: username,
-                            password: password,
-                            passphrase: passphrase
-                        )
+                    FirstTimeLoginView { _, _ in
+                        return "Normal unlock flow is not connected yet."
                     }
                 }
             }
@@ -86,54 +75,38 @@ struct VaultOnboardingCoordinator: View {
     }
 
     private func createSecureVault() {
-        let prototypeSecret = setupViewModel.buildPrototypeSecret()
+        guard setupViewModel.isUsernameValid,
+              setupViewModel.canContinueFromPassword,
+              setupViewModel.hasSavedPassphrase
+        else {
+            creationErrorMessage = "Please complete all required vault setup steps."
+            return
+        }
 
-        /*
-         TODO:
-         1. Generate or load vault salt.
-         2. Derive final database key from prototypeSecret using KDF.
-         3. Create/open GRDB + SQLCipher database.
-         4. Store safe metadata in Keychain/UserDefaults as needed.
-         5. Do not store master password or raw combined secret.
-         */
+        let username = setupViewModel.username.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        print("Prototype secret for development only:", prototypeSecret)
+        do {
+            try VaultCredentialStore.save(
+                username: username,
+                password: setupViewModel.masterPassword
+            )
 
-        path.append(.firstTimeLogin)
-    }
+            creationErrorMessage = nil
 
-    private func unlockFirstTime(
-        username: String,
-        password: String,
-        passphrase: String
-    ) {
-//        let prototypeSecret = VaultSecretBuilder.buildPrototypeCombinedSecret(
-//            password: password,
-//            passphrase: passphrase
-//        )
+            /*
+             TODO later:
+             1. Generate vault salt.
+             2. Derive SQLCipher key.
+             3. Create/open encrypted GRDB + SQLCipher DB.
+             4. Save only safe metadata.
+             5. Never store raw password in final production flow.
+             */
 
-        /*
-         TODO:
-         1. Validate username against local vault metadata.
-         2. Derive final SQLCipher key using same KDF config.
-         3. Try opening encrypted database.
-         4. If success, mark first unlock complete.
-         5. If biometric enabled, store unlock material safely in Keychain.
-         */
+            onVaultCreated(username)
 
-        //print("First unlock prototype secret:", prototypeSecret)
-
-        path.append(.normalUnlock)
-    }
-
-    private func unlockWithBiometrics() {
-        /*
-         TODO:
-         1. Use LAContext.
-         2. On success, read protected unlock secret/key material from Keychain.
-         3. Open SQLCipher database.
-         */
-
-        print("Biometric unlock requested")
+        } catch {
+            creationErrorMessage = "Could not save credentials securely. Please try again."
+            print("Keychain save failed:", error)
+        }
     }
 }

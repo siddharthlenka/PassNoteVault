@@ -12,6 +12,7 @@ struct CreateVaultReviewView: View {
     @ObservedObject var viewModel: VaultSetupViewModel
 
     var isCreating: Bool = false
+    var errorMessage: String? = nil
     let onCreateVault: () -> Void
 
     var body: some View {
@@ -56,6 +57,14 @@ struct CreateVaultReviewView: View {
                     title: "Ready to create vault",
                     message: "Your encrypted database will be created locally on this device."
                 )
+
+                if let errorMessage, !errorMessage.isEmpty {
+                    InfoWarningCard(
+                        kind: .warning,
+                        title: "Vault creation failed",
+                        message: errorMessage
+                    )
+                }
 
                 AppButton(
                     title: "Create Secure Vault",

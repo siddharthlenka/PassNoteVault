@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct PrivateVaultApp: App {
+    init() {
+        SQLCipherSmokeTest.shared.runTest()
+    }
+    
     var body: some Scene {
         WindowGroup {
             VaultRootView()
