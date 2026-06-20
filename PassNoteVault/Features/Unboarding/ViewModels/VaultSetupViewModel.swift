@@ -10,30 +10,11 @@ import Foundation
 import Combine
 
 final class VaultSetupViewModel: ObservableObject {
-    @Published var username: String = ""
     @Published var masterPassword: String = ""
     @Published var confirmPassword: String = ""
     @Published var recoveryPassphrase: String = RecoveryPassphraseGenerator.generate12DigitPassphrase()
     @Published var hasSavedPassphrase: Bool = false
     @Published var enableBiometrics: Bool = true
-
-    var usernameError: String? {
-        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if trimmed.isEmpty {
-            return "Username is required."
-        }
-
-        if trimmed.count < 3 {
-            return "Username must be at least 3 characters."
-        }
-
-        return nil
-    }
-
-    var isUsernameValid: Bool {
-        usernameError == nil
-    }
 
     var passwordValidation: PasswordValidationResult {
         PasswordValidator.validate(masterPassword)
@@ -61,13 +42,5 @@ final class VaultSetupViewModel: ObservableObject {
     func regeneratePassphrase() {
         recoveryPassphrase = RecoveryPassphraseGenerator.generate12DigitPassphrase()
         hasSavedPassphrase = false
-    }
-
-    func buildPrototypeSecret() -> String {
-//        VaultSecretBuilder.buildPrototypeCombinedSecret(
-//            password: masterPassword,
-//            passphrase: recoveryPassphrase
-//        )
-        "Prototype Secret"
     }
 }

@@ -12,7 +12,23 @@ struct PasswordVaultView: View {
     @StateObject private var viewModel = PasswordVaultViewModel()
 
     @State private var isShowingAddPassword = false
-    @State private var copiedPasswordId: UUID?
+    @State private var copiedPasswordId: String?
+    @State private var visiblePasswordIds: Set<String> = []
+    @State private var entryPendingDelete: PasswordEntry?
+    @State private var isShowingPasswordExport = false
+
+    private var isShowingDeleteAlert: Binding<Bool> {
+        Binding(
+            get: {
+                entryPendingDelete != nil
+            },
+            set: { newValue in
+                if !newValue {
+                    entryPendingDelete = nil
+                }
+            }
+        )
+    }
 
     var body: some View {
         VaultScreenContainer {
@@ -36,7 +52,15 @@ struct PasswordVaultView: View {
         }
         .navigationTitle("Passwords")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    isShowingPasswordExport = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .disabled(viewModel.entries.isEmpty)
+
                 Button {
                     isShowingAddPassword = true
                 } label: {
@@ -53,6 +77,28 @@ struct PasswordVaultView: View {
                 )
             }
         }
+        .sheet(isPresented: $isShowingPasswordExport) {
+            PasswordExportView(entries: viewModel.entries)
+        }
+        .alert("Delete password?", isPresented: isShowingDeleteAlert) {
+            Button("Cancel", role: .cancel) {
+                entryPendingDelete = nil
+            }
+
+            Button("Delete", role: .destructive) {
+                if let entry = entryPendingDelete {
+                    viewModel.deletePassword(entry)
+                    visiblePasswordIds.remove(entry.id)
+                    entryPendingDelete = nil
+                }
+            }
+        } message: {
+            if let entry = entryPendingDelete {
+                Text("This will delete the saved password for \(entry.accountName).")
+            } else {
+                Text("This saved password will be deleted.")
+            }
+        }
         .onAppear {
             viewModel.loadPasswords()
         }
@@ -64,7 +110,7 @@ struct PasswordVaultView: View {
                 .font(AppTheme.Typography.largeTitle)
                 .foregroundStyle(AppTheme.Colors.primaryText)
 
-            Text("Save account names and passwords locally inside your vault.")
+            Text("Save account names and passwords locally inside your encrypted vault.")
                 .font(AppTheme.Typography.body)
                 .foregroundStyle(AppTheme.Colors.secondaryText)
         }
@@ -86,17 +132,18 @@ struct PasswordVaultView: View {
                 ForEach(viewModel.entries) { entry in
                     PasswordEntryRow(
                         entry: entry,
-                        isCopied: copiedPasswordId == entry.id
-                    ) {
-                        ClipboardHelper.copy(entry.password)
-                        copiedPasswordId = entry.id
-
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                            if copiedPasswordId == entry.id {
-                                copiedPasswordId = nil
-                            }
+                        isPasswordVisible: visiblePasswordIds.contains(entry.id),
+                        isCopied: copiedPasswordId == entry.id,
+                        onToggleVisibility: {
+                            togglePasswordVisibility(entry)
+                        },
+                        onCopy: {
+                            copyPassword(entry)
+                        },
+                        onDelete: {
+                            entryPendingDelete = entry
                         }
-                    }
+                    )
 
                     Divider()
                         .background(AppTheme.Colors.border)
@@ -124,18 +171,49 @@ struct PasswordVaultView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text("")
-                .frame(width: 44)
+                .frame(width: 132)
         }
         .padding(.horizontal, AppTheme.Spacing.md)
         .padding(.vertical, AppTheme.Spacing.sm)
         .background(AppTheme.Colors.elevatedCard)
     }
+
+    private func togglePasswordVisibility(_ entry: PasswordEntry) {
+        if visiblePasswordIds.contains(entry.id) {
+            visiblePasswordIds.remove(entry.id)
+        } else {
+            visiblePasswordIds.insert(entry.id)
+        }
+    }
+
+    private func copyPassword(_ entry: PasswordEntry) {
+        ClipboardHelper.copy(entry.password)
+        copiedPasswordId = entry.id
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            if copiedPasswordId == entry.id {
+                copiedPasswordId = nil
+            }
+        }
+    }
 }
 
 private struct PasswordEntryRow: View {
     let entry: PasswordEntry
+    let isPasswordVisible: Bool
     let isCopied: Bool
+
+    let onToggleVisibility: () -> Void
     let onCopy: () -> Void
+    let onDelete: () -> Void
+
+    private var displayedPassword: String {
+        if isPasswordVisible {
+            return entry.password
+        } else {
+            return String(repeating: "•", count: min(max(entry.password.count, 8), 16))
+        }
+    }
 
     var body: some View {
         HStack(spacing: AppTheme.Spacing.md) {
@@ -145,25 +223,61 @@ private struct PasswordEntryRow: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(entry.password)
+            passwordText
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 4) {
+                Button {
+                    onToggleVisibility()
+                } label: {
+                    Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AppTheme.Colors.accent)
+                        .frame(width: 40, height: 40)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    onCopy()
+                } label: {
+                    Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(isCopied ? AppTheme.Colors.success : AppTheme.Colors.accent)
+                        .frame(width: 40, height: 40)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AppTheme.Colors.danger)
+                        .frame(width: 40, height: 40)
+                }
+                .buttonStyle(.plain)
+            }
+            .frame(width: 132)
+        }
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.vertical, AppTheme.Spacing.sm)
+    }
+
+    @ViewBuilder
+    private var passwordText: some View {
+        if isPasswordVisible {
+            Text(displayedPassword)
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundStyle(AppTheme.Colors.secondaryText)
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button {
-                onCopy()
-            } label: {
-                Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(isCopied ? AppTheme.Colors.success : AppTheme.Colors.accent)
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
+        } else {
+            Text(displayedPassword)
+                .font(.system(size: 14, weight: .medium, design: .monospaced))
+                .foregroundStyle(AppTheme.Colors.secondaryText)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
-        .padding(.horizontal, AppTheme.Spacing.md)
-        .padding(.vertical, AppTheme.Spacing.sm)
     }
 }

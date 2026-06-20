@@ -9,16 +9,13 @@
 import SwiftUI
 
 enum VaultRoute: Hashable {
-    case createUsername
     case createPassword
     case createPassphrase
     case review
-    case firstTimeLogin
-    case normalUnlock
 }
 
 struct VaultOnboardingCoordinator: View {
-    let onVaultCreated: (_ username: String) -> Void
+    let onVaultCreated: () -> Void
 
     @StateObject private var setupViewModel = VaultSetupViewModel()
     @State private var path: [VaultRoute] = []
@@ -28,19 +25,14 @@ struct VaultOnboardingCoordinator: View {
         NavigationStack(path: $path) {
             WelcomeView(
                 onCreateVault: {
-                    path.append(.createUsername)
+                    path.append(.createPassword)
                 },
                 onImportBackup: {
-                    path.append(.firstTimeLogin)
+                    // Backup import flow will be added later.
                 }
             )
             .navigationDestination(for: VaultRoute.self) { route in
                 switch route {
-                case .createUsername:
-                    CreateVaultUsernameView(viewModel: setupViewModel) {
-                        path.append(.createPassword)
-                    }
-
                 case .createPassword:
                     CreateVaultPasswordView(viewModel: setupViewModel) {
                         path.append(.createPassphrase)
@@ -58,16 +50,6 @@ struct VaultOnboardingCoordinator: View {
                     ) {
                         createSecureVault()
                     }
-
-                case .firstTimeLogin:
-                    FirstTimeLoginView { _, _ in
-                        return "Import backup flow is not connected yet."
-                    }
-
-                case .normalUnlock:
-                    FirstTimeLoginView { _, _ in
-                        return "Normal unlock flow is not connected yet."
-                    }
                 }
             }
         }
@@ -75,38 +57,31 @@ struct VaultOnboardingCoordinator: View {
     }
 
     private func createSecureVault() {
-        guard setupViewModel.isUsernameValid,
-              setupViewModel.canContinueFromPassword,
+        guard setupViewModel.canContinueFromPassword,
               setupViewModel.hasSavedPassphrase
         else {
             creationErrorMessage = "Please complete all required vault setup steps."
             return
         }
 
-        let username = setupViewModel.username.trimmingCharacters(in: .whitespacesAndNewlines)
-
         do {
-            try VaultCredentialStore.save(
-                username: username,
-                password: setupViewModel.masterPassword
-            )
-
-            creationErrorMessage = nil
+            try VaultDatabase.shared.open(passphrase: setupViewModel.masterPassword)
 
             /*
-             TODO later:
-             1. Generate vault salt.
-             2. Derive SQLCipher key.
-             3. Create/open encrypted GRDB + SQLCipher DB.
-             4. Save only safe metadata.
-             5. Never store raw password in final production flow.
+             Later:
+             - Do not use recovery passphrase for DB open directly.
+             - Use it for encrypted backup recovery/import.
+             - Add KDF: master password + salt -> SQLCipher key.
              */
 
-            onVaultCreated(username)
+            VaultDatabase.shared.close()
+
+            creationErrorMessage = nil
+            onVaultCreated()
 
         } catch {
-            creationErrorMessage = "Could not save credentials securely. Please try again."
-            print("Keychain save failed:", error)
+            print("Vault creation failed:", error)
+            creationErrorMessage = "Could not create encrypted vault. Please try again."
         }
     }
 }

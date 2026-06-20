@@ -34,7 +34,7 @@ struct WelcomeView: View {
                             .foregroundStyle(AppTheme.Colors.primaryText)
                             .multilineTextAlignment(.center)
 
-                        Text("Store passwords and private notes securely on this device. No cloud. No account. No tracking.")
+                    Text("Create a private offline vault for passwords and secure notes. No cloud. No account. No tracking.")
                             .font(AppTheme.Typography.body)
                             .foregroundStyle(AppTheme.Colors.secondaryText)
                             .multilineTextAlignment(.center)
@@ -57,7 +57,7 @@ struct WelcomeView: View {
                     )
 
                     AppButton(
-                        title: "Unlock Existing Vault / Import Backup later",
+                        title: "Import Encrypted Backup later",
                         systemImage: "tray.and.arrow.down",
                         kind: .secondary,
                         action: onImportBackup

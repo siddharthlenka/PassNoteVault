@@ -9,17 +9,32 @@
 import Foundation
 import Combine
 
+@MainActor
 final class PasswordVaultViewModel: ObservableObject {
     @Published private(set) var entries: [PasswordEntry] = []
     @Published var errorMessage: String?
 
-    func loadPasswords() {
-        /*
-         TODO later:
-         Fetch saved password records from encrypted SQLCipher database.
-         */
+    private var repository: PasswordVaultRepository? {
+        guard let dbQueue = VaultDatabase.shared.dbQueue else {
+            return nil
+        }
 
-        entries = entries
+        return PasswordVaultRepository(dbQueue: dbQueue)
+    }
+
+    func loadPasswords() {
+        guard let repository else {
+            errorMessage = "Database is not open."
+            return
+        }
+
+        do {
+            entries = try repository.fetchPasswords()
+            errorMessage = nil
+        } catch {
+            print("Fetch passwords failed:", error)
+            errorMessage = "Could not load saved passwords."
+        }
     }
 
     func savePassword(accountName: String, password: String) {
@@ -35,18 +50,38 @@ final class PasswordVaultViewModel: ObservableObject {
             return
         }
 
-        /*
-         TODO later:
-         Save this record inside SQLCipher encrypted database.
-         For now, this is memory-only prototype storage.
-         */
+        guard let repository else {
+            errorMessage = "Database is not open."
+            return
+        }
 
-        let entry = PasswordEntry(
-            accountName: trimmedAccountName,
-            password: password
-        )
+        do {
+            try repository.insertPassword(
+                accountName: trimmedAccountName,
+                password: password
+            )
 
-        entries.insert(entry, at: 0)
-        errorMessage = nil
+            entries = try repository.fetchPasswords()
+            errorMessage = nil
+        } catch {
+            print("Save password failed:", error)
+            errorMessage = "Could not save password."
+        }
+    }
+
+    func deletePassword(_ entry: PasswordEntry) {
+        guard let repository else {
+            errorMessage = "Database is not open."
+            return
+        }
+
+        do {
+            try repository.deletePassword(id: entry.id)
+            entries = try repository.fetchPasswords()
+            errorMessage = nil
+        } catch {
+            print("Delete password failed:", error)
+            errorMessage = "Could not delete password."
+        }
     }
 }

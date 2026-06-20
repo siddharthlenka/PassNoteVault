@@ -7,15 +7,16 @@
 
 
 import Foundation
+import GRDB
 
 struct PasswordEntry: Identifiable, Hashable {
-    let id: UUID
+    let id: String
     let accountName: String
     let password: String
     let createdAt: Date
 
     init(
-        id: UUID = UUID(),
+        id: String = UUID().uuidString,
         accountName: String,
         password: String,
         createdAt: Date = Date()
@@ -24,5 +25,16 @@ struct PasswordEntry: Identifiable, Hashable {
         self.accountName = accountName
         self.password = password
         self.createdAt = createdAt
+    }
+}
+
+extension PasswordEntry {
+    init(row: Row) {
+        id = row["id"]
+        accountName = row["accountName"]
+        password = row["password"]
+
+        let timestamp: Double = row["createdAt"]
+        createdAt = Date(timeIntervalSince1970: timestamp)
     }
 }

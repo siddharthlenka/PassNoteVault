@@ -13,7 +13,7 @@ struct AddPasswordView: View {
 
     @State private var accountName = ""
     @State private var password = ""
-    @State private var selectedLength: HexPasswordLength = .sixteen
+    @State private var selectedLength: GeneratedPasswordLength = .thirtyTwo
     @State private var didCopyGeneratedPassword = false
 
     let onSave: (_ accountName: String, _ password: String) -> Void
@@ -71,12 +71,12 @@ struct AddPasswordView: View {
 
     private var generatorSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-            Text("Generate random hex password")
+            Text("Generate strong password")
                 .font(AppTheme.Typography.caption)
                 .foregroundStyle(AppTheme.Colors.secondaryText)
 
             Picker("Password length", selection: $selectedLength) {
-                ForEach(HexPasswordLength.allCases) { length in
+                ForEach(GeneratedPasswordLength.allCases) { length in
                     Text(length.title)
                         .tag(length)
                 }
@@ -89,7 +89,7 @@ struct AddPasswordView: View {
                     systemImage: "wand.and.stars",
                     kind: .secondary
                 ) {
-                    password = SecureHexPasswordGenerator.generate(length: selectedLength)
+                    password = SecurePasswordGenerator.generate(length: selectedLength)
                     didCopyGeneratedPassword = false
                 }
 
@@ -121,8 +121,8 @@ struct AddPasswordView: View {
 
             InfoWarningCard(
                 kind: .info,
-                title: "Hex password",
-                message: "Generated password uses hexadecimal characters: 0-9 and A-F."
+                title: "Strong password",
+                message: "Generated passwords include uppercase letters, lowercase letters, numbers, and special characters. Use 32 as the recommended default. Use 64 only when the website accepts long passwords."
             )
         }
     }

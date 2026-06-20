@@ -11,43 +11,37 @@ import SwiftUI
 struct VaultRootView: View {
     @AppStorage("hasCreatedVault") private var hasCreatedVault = false
 
-    @State private var isAuthenticated = false
-    @State private var loggedInUsername = ""
-    @State private var loginSuccessMessage: String?
+    @State private var isUnlocked = false
+    @State private var unlockSuccessMessage: String?
 
     var body: some View {
-        if isAuthenticated {
+        if isUnlocked {
             VaultLandingView(
-                username: loggedInUsername,
-                onLogout: {
-                    isAuthenticated = false
-                    loggedInUsername = ""
+                onLockVault: {
+                    VaultDatabase.shared.close()
+                    isUnlocked = false
                 }
             )
         } else if !hasCreatedVault {
-            VaultOnboardingCoordinator(
-                onVaultCreated: { username in
-                    hasCreatedVault = true
-                    loginSuccessMessage = """
-                    Account creation successful. Try using your username and password to login. Save your username and password somewhere safe for future reference.
-                    """
-                }
-            )
+            VaultOnboardingCoordinator {
+                hasCreatedVault = true
+                unlockSuccessMessage = """
+                Vault created successfully. Enter your master password to unlock your vault.
+                """
+            }
         } else {
-            FirstTimeLoginView(
-                initialUsername: VaultCredentialStore.savedUsername ?? "",
-                successMessage: loginSuccessMessage
-            ) { username, password in
-
-                guard VaultCredentialStore.validate(username: username, password: password) else {
-                    return "Invalid username or password."
+            UnlockVaultView(
+                successMessage: unlockSuccessMessage
+            ) { masterPassword in
+                do {
+                    try VaultDatabase.shared.open(passphrase: masterPassword)
+                    unlockSuccessMessage = nil
+                    isUnlocked = true
+                    return nil
+                } catch {
+                    print("Unlock failed:", error)
+                    return "Invalid master password or vault could not be opened."
                 }
-
-                loggedInUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-                loginSuccessMessage = nil
-                isAuthenticated = true
-
-                return nil
             }
         }
     }

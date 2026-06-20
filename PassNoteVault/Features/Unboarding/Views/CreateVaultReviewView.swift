@@ -13,12 +13,13 @@ struct CreateVaultReviewView: View {
 
     var isCreating: Bool = false
     var errorMessage: String? = nil
+
     let onCreateVault: () -> Void
 
     var body: some View {
         VaultScreenContainer {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
-                StepProgressIndicator(currentStep: 4, totalSteps: 4)
+                StepProgressIndicator(currentStep: 3, totalSteps: 3)
 
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                     Text("Review vault setup")
@@ -31,9 +32,9 @@ struct CreateVaultReviewView: View {
                 }
 
                 VStack(spacing: AppTheme.Spacing.md) {
-                    ReviewRow(title: "Username", value: viewModel.username)
-                    ReviewRow(title: "Password", value: viewModel.isPasswordStrong ? "Strong" : "Weak")
-                    ReviewRow(title: "Passphrase", value: viewModel.hasSavedPassphrase ? "Saved" : "Not confirmed")
+                    ReviewRow(title: "Master Password", value: viewModel.isPasswordStrong ? "Strong" : "Weak")
+                    ReviewRow(title: "Recovery Passphrase", value: viewModel.hasSavedPassphrase ? "Saved" : "Not confirmed")
+                    ReviewRow(title: "Storage", value: "Offline encrypted database")
                 }
                 .padding(AppTheme.Spacing.md)
                 .background(AppTheme.Colors.card)
@@ -69,8 +70,7 @@ struct CreateVaultReviewView: View {
                 AppButton(
                     title: "Create Secure Vault",
                     systemImage: "lock.fill",
-                    isEnabled: viewModel.isUsernameValid &&
-                        viewModel.canContinueFromPassword &&
+                    isEnabled: viewModel.canContinueFromPassword &&
                         viewModel.hasSavedPassphrase,
                     isLoading: isCreating,
                     action: onCreateVault
