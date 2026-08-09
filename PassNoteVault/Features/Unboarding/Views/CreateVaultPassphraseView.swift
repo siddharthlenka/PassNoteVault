@@ -23,7 +23,7 @@ struct CreateVaultPassphraseView: View {
     var body: some View {
         VaultScreenContainer {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
-                StepProgressIndicator(currentStep: 3, totalSteps: 4)
+                StepProgressIndicator(currentStep: 2, totalSteps: 3)
 
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                     Text("Save your recovery passphrase")

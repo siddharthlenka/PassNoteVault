@@ -15,8 +15,7 @@ enum VaultHomeRoute: Hashable {
 }
 
 struct VaultLandingView: View {
-    let username: String
-    let onLogout: () -> Void
+    let onLockVault: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -54,10 +53,10 @@ struct VaultLandingView: View {
                     }
 
                     AppButton(
-                        title: "Logout",
-                        systemImage: "rectangle.portrait.and.arrow.right",
+                        title: "Lock Vault",
+                        systemImage: "lock.fill",
                         kind: .secondary,
-                        action: onLogout
+                        action: onLockVault
                     )
                 }
             }
@@ -67,10 +66,7 @@ struct VaultLandingView: View {
                     PasswordVaultView()
 
                 case .notes:
-                    PlaceholderVaultSectionView(
-                        title: "Notes",
-                        message: "Notes screen will be added later."
-                    )
+                    SecureNotesView()
 
                 case .settings:
                     PlaceholderVaultSectionView(
@@ -85,11 +81,11 @@ struct VaultLandingView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-            Text("Welcome, \(username)")
+            Text("Vault Unlocked")
                 .font(AppTheme.Typography.largeTitle)
                 .foregroundStyle(AppTheme.Colors.primaryText)
 
-            Text("Your private vault is unlocked.")
+            Text("Your private offline vault is ready.")
                 .font(AppTheme.Typography.body)
                 .foregroundStyle(AppTheme.Colors.secondaryText)
         }

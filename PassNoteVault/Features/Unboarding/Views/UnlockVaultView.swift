@@ -1,37 +1,33 @@
 //
-//  FirstTimeLoginView.swift
+//  UnlockVaultView.swift
 //  PassNoteVault
 //
-//  Created by siddharth lenka on 10/06/26.
+//  Created by siddharth lenka on 19/06/26.
 //
 
 
 import SwiftUI
 
-struct FirstTimeLoginView: View {
-    @State private var username: String
+struct UnlockVaultView: View {
     @State private var masterPassword = ""
     @State private var errorMessage: String?
 
     let successMessage: String?
     var isUnlocking: Bool
 
-    let onUnlock: (_ username: String, _ password: String) -> String?
+    let onUnlock: (_ masterPassword: String) -> String?
 
     init(
-        initialUsername: String = "",
         successMessage: String? = nil,
         isUnlocking: Bool = false,
-        onUnlock: @escaping (_ username: String, _ password: String) -> String?
+        onUnlock: @escaping (_ masterPassword: String) -> String?
     ) {
-        self._username = State(initialValue: initialUsername)
         self.successMessage = successMessage
         self.isUnlocking = isUnlocking
         self.onUnlock = onUnlock
     }
 
     private var canUnlock: Bool {
-        !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !masterPassword.isEmpty
     }
 
@@ -39,11 +35,11 @@ struct FirstTimeLoginView: View {
         VaultScreenContainer {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                    Text("Login to your vault")
+                    Text("Unlock Vault")
                         .font(AppTheme.Typography.title)
                         .foregroundStyle(AppTheme.Colors.primaryText)
 
-                    Text("Enter your local username and master password to unlock this device vault.")
+                    Text("Enter your master password to decrypt and open your local vault.")
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
@@ -51,35 +47,27 @@ struct FirstTimeLoginView: View {
                 if let successMessage {
                     InfoWarningCard(
                         kind: .success,
-                        title: "Account created",
+                        title: "Vault created",
                         message: successMessage
                     )
                 }
 
-                VStack(spacing: AppTheme.Spacing.md) {
-                    AppTextField(
-                        title: "Username",
-                        placeholder: "Enter username",
-                        text: $username
-                    )
-
-                    AppSecureField(
-                        title: "Master password",
-                        placeholder: "Enter master password",
-                        text: $masterPassword
-                    )
-                }
+                AppSecureField(
+                    title: "Master Password",
+                    placeholder: "Enter master password",
+                    text: $masterPassword
+                )
 
                 InfoWarningCard(
                     kind: .info,
-                    title: "Local unlock",
-                    message: "Your credentials are checked locally on this device. No server or internet connection is used."
+                    title: "Offline unlock",
+                    message: "Your vault is decrypted locally on this device. No server or internet connection is used."
                 )
 
                 if let errorMessage {
                     InfoWarningCard(
                         kind: .warning,
-                        title: "Login failed",
+                        title: "Unlock failed",
                         message: errorMessage
                     )
                 }
@@ -91,13 +79,11 @@ struct FirstTimeLoginView: View {
                     isLoading: isUnlocking
                 ) {
                     guard canUnlock else {
-                        errorMessage = "Please enter username and password."
+                        errorMessage = "Please enter your master password."
                         return
                     }
 
-                    let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-
-                    if let message = onUnlock(trimmedUsername, masterPassword) {
+                    if let message = onUnlock(masterPassword) {
                         errorMessage = message
                     } else {
                         errorMessage = nil
