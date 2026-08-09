@@ -17,11 +17,23 @@ enum VaultHomeRoute: Hashable {
 struct VaultLandingView: View {
     let onLockVault: () -> Void
 
+    @State private var isShowingVaultExport = false
+    @State private var isShowingVaultImport = false
+    @State private var statusMessage: String?
+
     var body: some View {
         NavigationStack {
             VaultScreenContainer {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
                     headerSection
+
+                    if let statusMessage {
+                        InfoWarningCard(
+                            kind: .info,
+                            title: "Vault import",
+                            message: statusMessage
+                        )
+                    }
 
                     VStack(spacing: AppTheme.Spacing.md) {
                         NavigationLink(value: VaultHomeRoute.passwords) {
@@ -38,6 +50,28 @@ struct VaultLandingView: View {
                                 icon: "note.text",
                                 title: "Notes",
                                 message: "Create private notes inside your encrypted vault."
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            isShowingVaultImport = true
+                        } label: {
+                            VaultModuleCard(
+                                icon: "tray.and.arrow.down.fill",
+                                title: "Import Vault",
+                                message: "Add passwords and notes from an encrypted backup."
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            isShowingVaultExport = true
+                        } label: {
+                            VaultModuleCard(
+                                icon: "lock.doc.fill",
+                                title: "Export Vault",
+                                message: "Create an encrypted backup of all passwords and notes."
                             )
                         }
                         .buttonStyle(.plain)
@@ -74,6 +108,14 @@ struct VaultLandingView: View {
             }
         }
         .tint(AppTheme.Colors.accent)
+        .sheet(isPresented: $isShowingVaultExport) {
+            VaultExportView()
+        }
+        .sheet(isPresented: $isShowingVaultImport) {
+            VaultImportView {
+                statusMessage = "Vault data imported successfully."
+            }
+        }
     }
 
     private var headerSection: some View {
@@ -130,27 +172,5 @@ private struct VaultModuleCard: View {
             RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
                 .stroke(AppTheme.Colors.border, lineWidth: 1)
         }
-    }
-}
-
-private struct PlaceholderVaultSectionView: View {
-    let title: String
-    let message: String
-
-    var body: some View {
-        VaultScreenContainer {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
-                Text(title)
-                    .font(AppTheme.Typography.largeTitle)
-                    .foregroundStyle(AppTheme.Colors.primaryText)
-
-                InfoWarningCard(
-                    kind: .info,
-                    title: "Coming later",
-                    message: message
-                )
-            }
-        }
-        .navigationTitle(title)
     }
 }

@@ -15,10 +15,12 @@ enum VaultRoute: Hashable {
 
 struct VaultOnboardingCoordinator: View {
     let onVaultCreated: () -> Void
+    var onVaultRestored: () -> Void
 
     @StateObject private var setupViewModel = VaultSetupViewModel()
     @State private var path: [VaultRoute] = []
     @State private var creationErrorMessage: String?
+    @State private var isShowingRestore = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -27,7 +29,7 @@ struct VaultOnboardingCoordinator: View {
                     path.append(.createPassword)
                 },
                 onImportBackup: {
-                    // Backup import flow will be added later.
+                    isShowingRestore = true
                 }
             )
             .navigationDestination(for: VaultRoute.self) { route in
@@ -48,6 +50,11 @@ struct VaultOnboardingCoordinator: View {
             }
         }
         .tint(AppTheme.Colors.accent)
+        .sheet(isPresented: $isShowingRestore) {
+            FullVaultRestoreView {
+                onVaultRestored()
+            }
+        }
     }
 
     private func createSecureVault() {

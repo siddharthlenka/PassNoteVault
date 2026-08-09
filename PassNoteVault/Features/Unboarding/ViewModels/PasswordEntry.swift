@@ -15,7 +15,7 @@ struct PasswordEntry: Identifiable, Hashable {
     let password: String
     let createdAt: Date
 
-    init(
+    nonisolated init(
         id: String = UUID().uuidString,
         accountName: String,
         password: String,

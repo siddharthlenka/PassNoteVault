@@ -35,23 +35,15 @@ final class PasswordVaultRepository {
         )
 
         try dbQueue.write { db in
-            try db.execute(
-                sql: """
-                    INSERT INTO password_entries (
-                        id,
-                        accountName,
-                        password,
-                        createdAt
-                    )
-                    VALUES (?, ?, ?, ?)
-                """,
-                arguments: [
-                    entry.id,
-                    entry.accountName,
-                    entry.password,
-                    entry.createdAt.timeIntervalSince1970
-                ]
-            )
+            try Self.insert(entry, in: db)
+        }
+    }
+
+    func importPasswords(_ entries: [PasswordEntry]) throws {
+        try dbQueue.write { db in
+            for entry in entries {
+                try Self.insert(entry, in: db)
+            }
         }
     }
 
@@ -65,5 +57,25 @@ final class PasswordVaultRepository {
                 arguments: [id]
             )
         }
+    }
+
+    static func insert(_ entry: PasswordEntry, in db: Database) throws {
+        try db.execute(
+            sql: """
+                INSERT INTO password_entries (
+                    id,
+                    accountName,
+                    password,
+                    createdAt
+                )
+                VALUES (?, ?, ?, ?)
+            """,
+            arguments: [
+                entry.id,
+                entry.accountName,
+                entry.password,
+                entry.createdAt.timeIntervalSince1970
+            ]
+        )
     }
 }

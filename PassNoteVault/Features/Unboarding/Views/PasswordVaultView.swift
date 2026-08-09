@@ -16,6 +16,7 @@ struct PasswordVaultView: View {
     @State private var visiblePasswordIds: Set<String> = []
     @State private var entryPendingDelete: PasswordEntry?
     @State private var isShowingPasswordExport = false
+    @State private var isShowingPasswordImport = false
 
     private var isShowingDeleteAlert: Binding<Bool> {
         Binding(
@@ -43,6 +44,14 @@ struct PasswordVaultView: View {
                     )
                 }
 
+                if let successMessage = viewModel.successMessage {
+                    InfoWarningCard(
+                        kind: .success,
+                        title: "Import complete",
+                        message: successMessage
+                    )
+                }
+
                 if viewModel.entries.isEmpty {
                     emptyState
                 } else {
@@ -53,6 +62,13 @@ struct PasswordVaultView: View {
         .navigationTitle("Passwords")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    isShowingPasswordImport = true
+                } label: {
+                    Image(systemName: "tray.and.arrow.down")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+
                 Button {
                     isShowingPasswordExport = true
                 } label: {
@@ -79,6 +95,11 @@ struct PasswordVaultView: View {
         }
         .sheet(isPresented: $isShowingPasswordExport) {
             PasswordExportView(entries: viewModel.entries)
+        }
+        .sheet(isPresented: $isShowingPasswordImport) {
+            PasswordImportView { importedEntries in
+                viewModel.importPasswords(importedEntries)
+            }
         }
         .alert("Delete password?", isPresented: isShowingDeleteAlert) {
             Button("Cancel", role: .cancel) {

@@ -17,7 +17,7 @@ struct SecureNote: Identifiable, Hashable {
     let createdAt: Date
     let updatedAt: Date
 
-    init(
+    nonisolated init(
         id: String = UUID().uuidString,
         title: String,
         content: String,

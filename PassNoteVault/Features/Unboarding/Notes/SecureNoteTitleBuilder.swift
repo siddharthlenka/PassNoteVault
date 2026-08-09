@@ -9,7 +9,7 @@
 import Foundation
 
 enum SecureNoteTitleBuilder {
-    static func makeTitle(from content: String) -> String {
+    nonisolated static func makeTitle(from content: String) -> String {
         let firstNonEmptyLine = content
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

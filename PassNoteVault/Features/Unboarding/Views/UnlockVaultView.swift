@@ -27,6 +27,7 @@ struct UnlockVaultView: View {
     let onBiometricUnlock: () async -> String?
     let onDisableBiometric: (_ masterPassword: String) -> String?
     let onStartOver: () -> String?
+    let onRestoreFromBackup: () -> Void
 
     private let biometricService = BiometricVaultKeyService.shared
 
@@ -37,7 +38,8 @@ struct UnlockVaultView: View {
         onUnlock: @escaping (_ masterPassword: String) -> String?,
         onBiometricUnlock: @escaping () async -> String? = { nil },
         onDisableBiometric: @escaping (_ masterPassword: String) -> String? = { _ in nil },
-        onStartOver: @escaping () -> String? = { nil }
+        onStartOver: @escaping () -> String? = { nil },
+        onRestoreFromBackup: @escaping () -> Void = {}
     ) {
         self.successMessage = successMessage
         self.isUnlocking = isUnlocking
@@ -46,6 +48,7 @@ struct UnlockVaultView: View {
         self.onBiometricUnlock = onBiometricUnlock
         self.onDisableBiometric = onDisableBiometric
         self.onStartOver = onStartOver
+        self.onRestoreFromBackup = onRestoreFromBackup
     }
 
     private var biometricName: String {
@@ -180,6 +183,14 @@ struct UnlockVaultView: View {
             Text("Having trouble with the password you just created?")
                 .font(AppTheme.Typography.caption)
                 .foregroundStyle(AppTheme.Colors.secondaryText)
+
+            AppButton(
+                title: "Restore From Backup",
+                systemImage: "tray.and.arrow.down",
+                kind: .secondary
+            ) {
+                onRestoreFromBackup()
+            }
 
             AppButton(
                 title: "Start Over",

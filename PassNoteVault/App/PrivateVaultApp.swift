@@ -17,6 +17,7 @@ struct VaultRootView: View {
     @State private var isUnlocked = false
     @State private var unlockSuccessMessage: String?
     @State private var unlockSessionID = UUID()
+    @State private var isShowingUnusedVaultRestore = false
 
     private var canStartOverUnusedVault: Bool {
         hasCreatedVault && activationMetadataInitialized && !vaultHasBeenActivated
@@ -32,13 +33,22 @@ struct VaultRootView: View {
                 }
             )
         } else if !hasCreatedVault {
-            VaultOnboardingCoordinator {
-                hasCreatedVault = true
-                unlockSessionID = UUID()
-                unlockSuccessMessage = """
-                Vault created successfully. Enter your master password to unlock your vault.
-                """
-            }
+            VaultOnboardingCoordinator(
+                onVaultCreated: {
+                    hasCreatedVault = true
+                    unlockSessionID = UUID()
+                    unlockSuccessMessage = """
+                    Vault created successfully. Enter your master password to unlock your vault.
+                    """
+                },
+                onVaultRestored: {
+                    hasCreatedVault = true
+                    vaultHasBeenActivated = true
+                    unlockSuccessMessage = nil
+                    unlockSessionID = UUID()
+                    isUnlocked = true
+                }
+            )
         } else {
             UnlockVaultView(
                 successMessage: unlockSuccessMessage,
@@ -70,9 +80,21 @@ struct VaultRootView: View {
                         print("Start over failed:", error)
                         return "Could not start over. Please try again."
                     }
+                },
+                onRestoreFromBackup: {
+                    isShowingUnusedVaultRestore = true
                 }
             )
             .id(unlockSessionID)
+            .sheet(isPresented: $isShowingUnusedVaultRestore) {
+                FullVaultRestoreView(resetUnusedVaultBeforeRestore: true) {
+                    hasCreatedVault = true
+                    vaultHasBeenActivated = true
+                    unlockSuccessMessage = nil
+                    unlockSessionID = UUID()
+                    isUnlocked = true
+                }
+            }
         }
     }
 

@@ -13,6 +13,7 @@ import Combine
 final class PasswordVaultViewModel: ObservableObject {
     @Published private(set) var entries: [PasswordEntry] = []
     @Published var errorMessage: String?
+    @Published var successMessage: String?
 
     private var repository: PasswordVaultRepository? {
         guard let dbQueue = VaultDatabase.shared.dbQueue else {
@@ -31,6 +32,7 @@ final class PasswordVaultViewModel: ObservableObject {
         do {
             entries = try repository.fetchPasswords()
             errorMessage = nil
+            successMessage = nil
         } catch {
             print("Fetch passwords failed:", error)
             errorMessage = "Could not load saved passwords."
@@ -63,6 +65,7 @@ final class PasswordVaultViewModel: ObservableObject {
 
             entries = try repository.fetchPasswords()
             errorMessage = nil
+            successMessage = nil
         } catch {
             print("Save password failed:", error)
             errorMessage = "Could not save password."
@@ -79,9 +82,32 @@ final class PasswordVaultViewModel: ObservableObject {
             try repository.deletePassword(id: entry.id)
             entries = try repository.fetchPasswords()
             errorMessage = nil
+            successMessage = nil
         } catch {
             print("Delete password failed:", error)
             errorMessage = "Could not delete password."
+        }
+    }
+
+    func importPasswords(_ importedEntries: [PasswordEntry]) {
+        guard !importedEntries.isEmpty else {
+            errorMessage = "No passwords to import."
+            return
+        }
+
+        guard let repository else {
+            errorMessage = "Database is not open."
+            return
+        }
+
+        do {
+            try repository.importPasswords(importedEntries)
+            entries = try repository.fetchPasswords()
+            errorMessage = nil
+            successMessage = "\(importedEntries.count) passwords imported."
+        } catch {
+            print("Import passwords failed:", error)
+            errorMessage = "Could not import passwords."
         }
     }
 }
