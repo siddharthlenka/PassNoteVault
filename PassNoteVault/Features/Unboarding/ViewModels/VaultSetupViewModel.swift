@@ -12,9 +12,6 @@ import Combine
 final class VaultSetupViewModel: ObservableObject {
     @Published var masterPassword: String = ""
     @Published var confirmPassword: String = ""
-    @Published var recoveryPassphrase: String = RecoveryPassphraseGenerator.generate12DigitPassphrase()
-    @Published var hasSavedPassphrase: Bool = false
-    @Published var enableBiometrics: Bool = true
 
     var passwordValidation: PasswordValidationResult {
         PasswordValidator.validate(masterPassword)
@@ -35,12 +32,8 @@ final class VaultSetupViewModel: ObservableObject {
         masterPassword == confirmPassword
     }
 
-    var canContinueFromPassphrase: Bool {
-        hasSavedPassphrase
-    }
-
-    func regeneratePassphrase() {
-        recoveryPassphrase = RecoveryPassphraseGenerator.generate12DigitPassphrase()
-        hasSavedPassphrase = false
+    func clearSensitiveInputs() {
+        masterPassword = ""
+        confirmPassword = ""
     }
 }

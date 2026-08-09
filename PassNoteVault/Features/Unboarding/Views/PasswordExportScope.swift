@@ -63,7 +63,7 @@ struct PasswordExportView: View {
                     InfoWarningCard(
                         kind: .warning,
                         title: "Encrypted export only",
-                        message: "Passwords can be exported only as an encrypted backup. Remember your master password and recovery passphrase. You will need them to reuse or import your passwords later."
+                        message: "Passwords can be exported only as an encrypted backup. Remember your master password. You will need it to reuse or import your passwords later."
                     )
 
                     if exportScope == .selected {
@@ -136,7 +136,7 @@ struct PasswordExportView: View {
                 // TODO later:
                 // 1. Collect selected passwords
                 // 2. Convert to backup JSON
-                // 3. Encrypt using master password + recovery passphrase
+                // 3. Encrypt using master password
                 // 4. Show share sheet
                 dismiss()
             }

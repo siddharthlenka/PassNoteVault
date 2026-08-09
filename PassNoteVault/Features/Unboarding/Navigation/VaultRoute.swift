@@ -10,7 +10,6 @@ import SwiftUI
 
 enum VaultRoute: Hashable {
     case createPassword
-    case createPassphrase
     case review
 }
 
@@ -35,11 +34,6 @@ struct VaultOnboardingCoordinator: View {
                 switch route {
                 case .createPassword:
                     CreateVaultPasswordView(viewModel: setupViewModel) {
-                        path.append(.createPassphrase)
-                    }
-
-                case .createPassphrase:
-                    CreateVaultPassphraseView(viewModel: setupViewModel) {
                         path.append(.review)
                     }
 
@@ -57,24 +51,15 @@ struct VaultOnboardingCoordinator: View {
     }
 
     private func createSecureVault() {
-        guard setupViewModel.canContinueFromPassword,
-              setupViewModel.hasSavedPassphrase
-        else {
+        guard setupViewModel.canContinueFromPassword else {
             creationErrorMessage = "Please complete all required vault setup steps."
             return
         }
 
         do {
-            try VaultDatabase.shared.open(passphrase: setupViewModel.masterPassword)
-
-            /*
-             Later:
-             - Do not use recovery passphrase for DB open directly.
-             - Use it for encrypted backup recovery/import.
-             - Add KDF: master password + salt -> SQLCipher key.
-             */
-
+            try VaultDatabase.shared.create(masterPassword: setupViewModel.masterPassword)
             VaultDatabase.shared.close()
+            setupViewModel.clearSensitiveInputs()
 
             creationErrorMessage = nil
             onVaultCreated()
