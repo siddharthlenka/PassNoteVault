@@ -69,10 +69,7 @@ struct VaultLandingView: View {
                     SecureNotesView()
 
                 case .settings:
-                    PlaceholderVaultSectionView(
-                        title: "Settings",
-                        message: "Settings screen will be added later."
-                    )
+                    SecuritySettingsView()
                 }
             }
         }

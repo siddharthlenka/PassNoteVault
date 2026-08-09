@@ -14,6 +14,7 @@ struct AppSecureField: View {
     @Binding var text: String
 
     var error: String?
+    var focus: FocusState<Bool>.Binding?
 
     @State private var isVisible = false
 
@@ -35,6 +36,7 @@ struct AppSecureField: View {
                 .autocorrectionDisabled(true)
                 .font(AppTheme.Typography.body)
                 .foregroundStyle(AppTheme.Colors.primaryText)
+                .appFocused(focus)
 
                 Button {
                     isVisible.toggle()
@@ -58,6 +60,17 @@ struct AppSecureField: View {
                     .font(AppTheme.Typography.caption)
                     .foregroundStyle(AppTheme.Colors.danger)
             }
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func appFocused(_ focus: FocusState<Bool>.Binding?) -> some View {
+        if let focus {
+            self.focused(focus)
+        } else {
+            self
         }
     }
 }

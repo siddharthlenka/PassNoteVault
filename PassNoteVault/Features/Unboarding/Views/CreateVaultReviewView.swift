@@ -19,7 +19,7 @@ struct CreateVaultReviewView: View {
     var body: some View {
         VaultScreenContainer {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
-                StepProgressIndicator(currentStep: 3, totalSteps: 3)
+                StepProgressIndicator(currentStep: 2, totalSteps: 2)
 
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                     Text("Review vault setup")
@@ -33,25 +33,11 @@ struct CreateVaultReviewView: View {
 
                 VStack(spacing: AppTheme.Spacing.md) {
                     ReviewRow(title: "Master Password", value: viewModel.isPasswordStrong ? "Strong" : "Weak")
-                    ReviewRow(title: "Recovery Passphrase", value: viewModel.hasSavedPassphrase ? "Saved" : "Not confirmed")
                     ReviewRow(title: "Storage", value: "Offline encrypted database")
                 }
                 .padding(AppTheme.Spacing.md)
                 .background(AppTheme.Colors.card)
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous))
-
-                Toggle(isOn: $viewModel.enableBiometrics) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Enable Face ID / Touch ID")
-                            .font(AppTheme.Typography.callout.weight(.semibold))
-                            .foregroundStyle(AppTheme.Colors.primaryText)
-
-                        Text("Use biometrics for faster future unlocks.")
-                            .font(AppTheme.Typography.caption)
-                            .foregroundStyle(AppTheme.Colors.secondaryText)
-                    }
-                }
-                .toggleStyle(.switch)
 
                 InfoWarningCard(
                     kind: .info,
@@ -70,8 +56,7 @@ struct CreateVaultReviewView: View {
                 AppButton(
                     title: "Create Secure Vault",
                     systemImage: "lock.fill",
-                    isEnabled: viewModel.canContinueFromPassword &&
-                        viewModel.hasSavedPassphrase,
+                    isEnabled: viewModel.canContinueFromPassword,
                     isLoading: isCreating,
                     action: onCreateVault
                 )

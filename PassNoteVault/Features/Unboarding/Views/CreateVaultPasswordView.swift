@@ -15,7 +15,7 @@ struct CreateVaultPasswordView: View {
     var body: some View {
         VaultScreenContainer {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
-                StepProgressIndicator(currentStep: 1, totalSteps: 3)
+                StepProgressIndicator(currentStep: 1, totalSteps: 2)
 
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                     Text("Create a strong password")
@@ -47,7 +47,7 @@ struct CreateVaultPasswordView: View {
                 InfoWarningCard(
                     kind: .warning,
                     title: "Recovery warning",
-                    message: "If you forget your password, your vault cannot be recovered unless you have an encrypted backup and passphrase."
+                    message: "If you forget your password, your vault cannot be recovered."
                 )
 
                 AppButton(

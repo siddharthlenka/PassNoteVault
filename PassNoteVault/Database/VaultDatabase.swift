@@ -9,6 +9,11 @@
 import Foundation
 import GRDB
 
+enum VaultDatabaseError: Error {
+    case missingVaultKeyEnvelope
+    case cannotResetActivatedVault
+}
+
 final class VaultDatabase {
     static let shared = VaultDatabase()
 
@@ -16,37 +21,71 @@ final class VaultDatabase {
 
     private(set) var dbQueue: DatabaseQueue?
 
-    func open(passphrase: String) throws {
-        if dbQueue != nil {
-            return
+    func create(masterPassword: String) throws {
+        var vaultKey = try SecureRandom.data(count: VaultKeyEnvelope.vaultKeyByteCount)
+
+        defer {
+            vaultKey.resetBytes(in: 0..<vaultKey.count)
         }
 
-        let dbURL = try databaseURL()
+        let envelope = try VaultKeyEnvelope.create(
+            masterPassword: masterPassword,
+            vaultKey: vaultKey
+        )
 
-        print("Vault DB path:", dbURL.path)
+        do {
+            try VaultKeyEnvelopeStore.shared.save(envelope)
+            try openDatabase(using: vaultKey)
+            VaultLifecycleMetadata.prepareNewVaultLifecycle()
+        } catch {
+            VaultKeyEnvelopeStore.shared.delete()
+            dbQueue = nil
+            throw error
+        }
+    }
 
-        var config = Configuration()
-        config.prepareDatabase { db in
-            try db.usePassphrase(passphrase)
+    func open(masterPassword: String) throws {
+        guard let storedEnvelope = try VaultKeyEnvelopeStore.shared.readStoredEnvelope() else {
+            throw VaultDatabaseError.missingVaultKeyEnvelope
         }
 
-        let queue = try DatabaseQueue(path: dbURL.path, configuration: config)
+        switch storedEnvelope {
+        case .current(let envelope):
+            var vaultKey = try envelope.unwrapVaultKey(masterPassword: masterPassword)
 
-        try migrate(queue)
+            defer {
+                vaultKey.resetBytes(in: 0..<vaultKey.count)
+            }
 
-        dbQueue = queue
+            try openDatabase(using: vaultKey)
 
-        try queue.read { db in
-            let cipherVersion = try String.fetchOne(db, sql: "PRAGMA cipher_version;")
-            print("SQLCipher version:", cipherVersion ?? "nil")
+        case .legacy(let legacyEnvelope):
+            try migrateLegacyEnvelope(
+                legacyEnvelope,
+                masterPassword: masterPassword
+            )
+        }
+    }
 
-            let tables = try String.fetchAll(db, sql: """
-                SELECT name
-                FROM sqlite_master
-                WHERE type = 'table'
-            """)
+    func open(vaultKey: Data) throws {
+        try openDatabase(using: vaultKey)
+    }
 
-            print("Vault DB tables:", tables)
+    func recoverVaultKey(masterPassword: String) throws -> Data {
+        guard let storedEnvelope = try VaultKeyEnvelopeStore.shared.readStoredEnvelope() else {
+            throw VaultDatabaseError.missingVaultKeyEnvelope
+        }
+
+        switch storedEnvelope {
+        case .current(let envelope):
+            return try envelope.unwrapVaultKey(masterPassword: masterPassword)
+
+        case .legacy(let legacyEnvelope):
+            return try PasswordKeyDeriver.deriveKey(
+                password: masterPassword,
+                salt: legacyEnvelope.salt,
+                iterations: legacyEnvelope.iterations
+            )
         }
     }
 
@@ -54,24 +93,98 @@ final class VaultDatabase {
         dbQueue = nil
     }
 
+    func resetUnusedVault() throws {
+        guard VaultLifecycleMetadata.canResetUnusedVault else {
+            throw VaultDatabaseError.cannotResetActivatedVault
+        }
+
+        close()
+        try removeDatabaseFiles()
+        VaultKeyEnvelopeStore.shared.delete()
+        BiometricVaultKeyService.shared.disable()
+        VaultLifecycleMetadata.clearUnusedVaultLifecycle()
+    }
+
+    private func migrateLegacyEnvelope(
+        _ legacyEnvelope: LegacyVaultKeyEnvelope,
+        masterPassword: String
+    ) throws {
+        var vaultKey = try PasswordKeyDeriver.deriveKey(
+            password: masterPassword,
+            salt: legacyEnvelope.salt,
+            iterations: legacyEnvelope.iterations
+        )
+
+        defer {
+            vaultKey.resetBytes(in: 0..<vaultKey.count)
+        }
+
+        try openDatabase(using: vaultKey)
+
+        let migratedEnvelope = try VaultKeyEnvelope.create(
+            masterPassword: masterPassword,
+            vaultKey: vaultKey
+        )
+        try VaultKeyEnvelopeStore.shared.save(migratedEnvelope)
+    }
+
+    private func openDatabase(using vaultKey: Data) throws {
+        if dbQueue != nil {
+            return
+        }
+
+        let dbURL = try databaseURL()
+
+        var config = Configuration()
+        config.prepareDatabase { db in
+            try db.usePassphrase(vaultKey)
+        }
+
+        let queue = try DatabaseQueue(path: dbURL.path, configuration: config)
+
+        try migrate(queue)
+
+        dbQueue = queue
+    }
+
     private func databaseURL() throws -> URL {
+        let appFolderURL = try appSupportFolderURL(createIfNeeded: true)
+        return appFolderURL.appendingPathComponent("vault.sqlite")
+    }
+
+    private func appSupportFolderURL(createIfNeeded: Bool) throws -> URL {
         let folderURL = try FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
-            create: true
+            create: createIfNeeded
         )
 
         let appFolderURL = folderURL.appendingPathComponent("PrivateVault", isDirectory: true)
 
-        if !FileManager.default.fileExists(atPath: appFolderURL.path) {
+        if createIfNeeded && !FileManager.default.fileExists(atPath: appFolderURL.path) {
             try FileManager.default.createDirectory(
                 at: appFolderURL,
                 withIntermediateDirectories: true
             )
         }
 
-        return appFolderURL.appendingPathComponent("vault.sqlite")
+        return appFolderURL
+    }
+
+    private func removeDatabaseFiles() throws {
+        let appFolderURL = try appSupportFolderURL(createIfNeeded: false)
+        let dbURL = appFolderURL.appendingPathComponent("vault.sqlite")
+        let relatedURLs = [
+            dbURL,
+            URL(fileURLWithPath: dbURL.path + "-wal"),
+            URL(fileURLWithPath: dbURL.path + "-shm"),
+            URL(fileURLWithPath: dbURL.path + "-journal")
+        ]
+
+        for url in relatedURLs where FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
     }
 
     private func migrate(_ dbQueue: DatabaseQueue) throws {
