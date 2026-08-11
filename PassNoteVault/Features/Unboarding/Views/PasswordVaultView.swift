@@ -14,20 +14,14 @@ struct PasswordVaultView: View {
     @State private var isShowingAddPassword = false
     @State private var copiedPasswordId: String?
     @State private var visiblePasswordIds: Set<String> = []
-    @State private var entryPendingDelete: PasswordEntry?
     @State private var isShowingPasswordExport = false
+    @State private var isShowingPasswordImport = false
+    @State private var isSelectingPasswords = false
+    @State private var selectedPasswordIds: Set<String> = []
+    @State private var isShowingDeleteSelectedAlert = false
 
-    private var isShowingDeleteAlert: Binding<Bool> {
-        Binding(
-            get: {
-                entryPendingDelete != nil
-            },
-            set: { newValue in
-                if !newValue {
-                    entryPendingDelete = nil
-                }
-            }
-        )
+    private var selectedEntries: [PasswordEntry] {
+        viewModel.entries.filter { selectedPasswordIds.contains($0.id) }
     }
 
     var body: some View {
@@ -43,6 +37,14 @@ struct PasswordVaultView: View {
                     )
                 }
 
+                if let successMessage = viewModel.successMessage {
+                    InfoWarningCard(
+                        kind: .success,
+                        title: "Import complete",
+                        message: successMessage
+                    )
+                }
+
                 if viewModel.entries.isEmpty {
                     emptyState
                 } else {
@@ -53,6 +55,33 @@ struct PasswordVaultView: View {
         .navigationTitle("Passwords")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                if !viewModel.entries.isEmpty {
+                    Button(isSelectingPasswords ? "Cancel" : "Select") {
+                        if isSelectingPasswords {
+                            exitSelectionMode()
+                        } else {
+                            isSelectingPasswords = true
+                        }
+                    }
+
+                    if isSelectingPasswords {
+                        Button {
+                            isShowingDeleteSelectedAlert = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 17, weight: .semibold))
+                        }
+                        .disabled(selectedPasswordIds.isEmpty)
+                    }
+                }
+
+                Button {
+                    isShowingPasswordImport = true
+                } label: {
+                    Image(systemName: "tray.and.arrow.down")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+
                 Button {
                     isShowingPasswordExport = true
                 } label: {
@@ -60,6 +89,7 @@ struct PasswordVaultView: View {
                         .font(.system(size: 17, weight: .semibold))
                 }
                 .disabled(viewModel.entries.isEmpty)
+                .disabled(isSelectingPasswords)
 
                 Button {
                     isShowingAddPassword = true
@@ -67,12 +97,14 @@ struct PasswordVaultView: View {
                     Image(systemName: "plus")
                         .font(.system(size: 17, weight: .semibold))
                 }
+                .disabled(isSelectingPasswords)
             }
         }
         .sheet(isPresented: $isShowingAddPassword) {
-            AddPasswordView { accountName, password in
+            AddPasswordView { accountName, username, password in
                 viewModel.savePassword(
                     accountName: accountName,
+                    username: username,
                     password: password
                 )
             }
@@ -80,24 +112,21 @@ struct PasswordVaultView: View {
         .sheet(isPresented: $isShowingPasswordExport) {
             PasswordExportView(entries: viewModel.entries)
         }
-        .alert("Delete password?", isPresented: isShowingDeleteAlert) {
+        .sheet(isPresented: $isShowingPasswordImport) {
+            PasswordImportView { importedEntries in
+                viewModel.importPasswords(importedEntries)
+            }
+        }
+        .alert("Delete selected passwords?", isPresented: $isShowingDeleteSelectedAlert) {
             Button("Cancel", role: .cancel) {
-                entryPendingDelete = nil
+                isShowingDeleteSelectedAlert = false
             }
 
             Button("Delete", role: .destructive) {
-                if let entry = entryPendingDelete {
-                    viewModel.deletePassword(entry)
-                    visiblePasswordIds.remove(entry.id)
-                    entryPendingDelete = nil
-                }
+                deleteSelectedPasswords()
             }
         } message: {
-            if let entry = entryPendingDelete {
-                Text("This will delete the saved password for \(entry.accountName).")
-            } else {
-                Text("This saved password will be deleted.")
-            }
+            Text("This will delete \(selectedPasswordIds.count) selected password \(selectedPasswordIds.count == 1 ? "record" : "records").")
         }
         .onAppear {
             viewModel.loadPasswords()
@@ -134,14 +163,16 @@ struct PasswordVaultView: View {
                         entry: entry,
                         isPasswordVisible: visiblePasswordIds.contains(entry.id),
                         isCopied: copiedPasswordId == entry.id,
+                        isSelecting: isSelectingPasswords,
+                        isSelected: selectedPasswordIds.contains(entry.id),
+                        onToggleSelection: {
+                            toggleSelection(entry)
+                        },
                         onToggleVisibility: {
                             togglePasswordVisibility(entry)
                         },
                         onCopy: {
                             copyPassword(entry)
-                        },
-                        onDelete: {
-                            entryPendingDelete = entry
                         }
                     )
 
@@ -160,6 +191,11 @@ struct PasswordVaultView: View {
 
     private var tableHeader: some View {
         HStack(spacing: AppTheme.Spacing.md) {
+            if isSelectingPasswords {
+                Text("")
+                    .frame(width: 28)
+            }
+
             Text("Account")
                 .font(AppTheme.Typography.caption)
                 .foregroundStyle(AppTheme.Colors.secondaryText)
@@ -171,7 +207,7 @@ struct PasswordVaultView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text("")
-                .frame(width: 132)
+                .frame(width: 88)
         }
         .padding(.horizontal, AppTheme.Spacing.md)
         .padding(.vertical, AppTheme.Spacing.sm)
@@ -196,16 +232,38 @@ struct PasswordVaultView: View {
             }
         }
     }
+
+    private func toggleSelection(_ entry: PasswordEntry) {
+        if selectedPasswordIds.contains(entry.id) {
+            selectedPasswordIds.remove(entry.id)
+        } else {
+            selectedPasswordIds.insert(entry.id)
+        }
+    }
+
+    private func deleteSelectedPasswords() {
+        let idsToDelete = selectedPasswordIds
+        visiblePasswordIds.subtract(idsToDelete)
+        viewModel.deletePasswords(selectedEntries)
+        exitSelectionMode()
+    }
+
+    private func exitSelectionMode() {
+        isSelectingPasswords = false
+        selectedPasswordIds.removeAll()
+    }
 }
 
 private struct PasswordEntryRow: View {
     let entry: PasswordEntry
     let isPasswordVisible: Bool
     let isCopied: Bool
+    let isSelecting: Bool
+    let isSelected: Bool
 
+    let onToggleSelection: () -> Void
     let onToggleVisibility: () -> Void
     let onCopy: () -> Void
-    let onDelete: () -> Void
 
     private var displayedPassword: String {
         if isPasswordVisible {
@@ -217,14 +275,39 @@ private struct PasswordEntryRow: View {
 
     var body: some View {
         HStack(spacing: AppTheme.Spacing.md) {
-            Text(entry.accountName)
-                .font(AppTheme.Typography.callout.weight(.semibold))
-                .foregroundStyle(AppTheme.Colors.primaryText)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if isSelecting {
+                Button {
+                    onToggleSelection()
+                } label: {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(isSelected ? AppTheme.Colors.accent : AppTheme.Colors.mutedText)
+                        .frame(width: 28, height: 44)
+                }
+                .buttonStyle(.plain)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.accountName)
+                    .font(AppTheme.Typography.callout.weight(.semibold))
+                    .foregroundStyle(AppTheme.Colors.primaryText)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let username = entry.username, !username.isEmpty {
+                    Text(username)
+                        .font(AppTheme.Typography.caption)
+                        .foregroundStyle(AppTheme.Colors.secondaryText)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
             passwordText
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
 
             HStack(spacing: 4) {
                 Button {
@@ -246,21 +329,17 @@ private struct PasswordEntryRow: View {
                         .frame(width: 40, height: 40)
                 }
                 .buttonStyle(.plain)
-
-                Button {
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(AppTheme.Colors.danger)
-                        .frame(width: 40, height: 40)
-                }
-                .buttonStyle(.plain)
             }
-            .frame(width: 132)
+            .frame(width: 88)
         }
         .padding(.horizontal, AppTheme.Spacing.md)
         .padding(.vertical, AppTheme.Spacing.sm)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isSelecting {
+                onToggleSelection()
+            }
+        }
     }
 
     @ViewBuilder
@@ -269,15 +348,17 @@ private struct PasswordEntryRow: View {
             Text(displayedPassword)
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundStyle(AppTheme.Colors.secondaryText)
-                .lineLimit(1)
+                .lineLimit(nil)
                 .truncationMode(.middle)
                 .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
         } else {
             Text(displayedPassword)
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundStyle(AppTheme.Colors.secondaryText)
-                .lineLimit(1)
+                .lineLimit(nil)
                 .truncationMode(.middle)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

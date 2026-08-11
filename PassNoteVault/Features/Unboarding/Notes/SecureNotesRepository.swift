@@ -35,37 +35,37 @@ final class SecureNotesRepository {
         )
 
         try dbQueue.write { db in
-            try db.execute(
-                sql: """
-                    INSERT INTO secure_notes (
-                        id,
-                        title,
-                        content,
-                        isTitleManuallyRenamed,
-                        createdAt,
-                        updatedAt
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                arguments: [
-                    note.id,
-                    note.title,
-                    note.content,
-                    note.isTitleManuallyRenamed ? 1 : 0,
-                    note.createdAt.timeIntervalSince1970,
-                    note.updatedAt.timeIntervalSince1970
-                ]
-            )
+            try Self.insert(note, in: db)
         }
 
         return note
     }
 
-    func updateNoteContent(noteID: String, content: String) throws {
+    func importNotes(_ notes: [SecureNote]) throws {
+        try dbQueue.write { db in
+            for note in notes {
+                try Self.insert(note, in: db)
+            }
+        }
+    }
+
+    func updateNoteContent(noteID: String, content: String) throws -> Bool {
         let autoTitle = SecureNoteTitleBuilder.makeTitle(from: content)
         let updatedAt = Date().timeIntervalSince1970
 
-        try dbQueue.write { db in
+        return try dbQueue.write { db in
+            let oldContent: String = try String.fetchOne(
+                db,
+                sql: """
+                    SELECT content
+                    FROM secure_notes
+                    WHERE id = ?
+                """,
+                arguments: [noteID]
+            ) ?? ""
+            let wasEmpty = oldContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let isNowNonEmpty = !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
             try db.execute(
                 sql: """
                     UPDATE secure_notes
@@ -85,6 +85,8 @@ final class SecureNotesRepository {
                     noteID
                 ]
             )
+
+            return wasEmpty && isNowNonEmpty
         }
     }
 
@@ -134,5 +136,29 @@ final class SecureNotesRepository {
         }
 
         try deleteNote(noteID: noteID)
+    }
+
+    static func insert(_ note: SecureNote, in db: Database) throws {
+        try db.execute(
+            sql: """
+                INSERT INTO secure_notes (
+                    id,
+                    title,
+                    content,
+                    isTitleManuallyRenamed,
+                    createdAt,
+                    updatedAt
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            arguments: [
+                note.id,
+                note.title,
+                note.content,
+                note.isTitleManuallyRenamed ? 1 : 0,
+                note.createdAt.timeIntervalSince1970,
+                note.updatedAt.timeIntervalSince1970
+            ]
+        )
     }
 }

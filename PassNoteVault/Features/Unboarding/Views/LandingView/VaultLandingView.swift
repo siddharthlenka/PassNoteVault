@@ -26,7 +26,7 @@ struct VaultLandingView: View {
                     VStack(spacing: AppTheme.Spacing.md) {
                         NavigationLink(value: VaultHomeRoute.passwords) {
                             VaultModuleCard(
-                                icon: "person.crop.circle.badge.key",
+                                icon: "key.fill",
                                 title: "Passwords",
                                 message: "Store account names and passwords securely."
                             )
@@ -72,6 +72,8 @@ struct VaultLandingView: View {
                     SecuritySettingsView()
                 }
             }
+            .navigationTitle("Vault")
+            .navigationBarTitleDisplayMode(.inline)
         }
         .tint(AppTheme.Colors.accent)
     }
@@ -130,27 +132,5 @@ private struct VaultModuleCard: View {
             RoundedRectangle(cornerRadius: AppTheme.Radius.md, style: .continuous)
                 .stroke(AppTheme.Colors.border, lineWidth: 1)
         }
-    }
-}
-
-private struct PlaceholderVaultSectionView: View {
-    let title: String
-    let message: String
-
-    var body: some View {
-        VaultScreenContainer {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
-                Text(title)
-                    .font(AppTheme.Typography.largeTitle)
-                    .foregroundStyle(AppTheme.Colors.primaryText)
-
-                InfoWarningCard(
-                    kind: .info,
-                    title: "Coming later",
-                    message: message
-                )
-            }
-        }
-        .navigationTitle(title)
     }
 }

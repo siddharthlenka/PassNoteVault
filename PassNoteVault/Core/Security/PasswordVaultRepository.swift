@@ -19,7 +19,7 @@ final class PasswordVaultRepository {
     func fetchPasswords() throws -> [PasswordEntry] {
         try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: """
-                SELECT id, accountName, password, createdAt
+                SELECT id, accountName, username, password, createdAt
                 FROM password_entries
                 ORDER BY createdAt DESC
             """)
@@ -28,30 +28,23 @@ final class PasswordVaultRepository {
         }
     }
 
-    func insertPassword(accountName: String, password: String) throws {
+    func insertPassword(accountName: String, username: String?, password: String) throws {
         let entry = PasswordEntry(
             accountName: accountName,
+            username: username,
             password: password
         )
 
         try dbQueue.write { db in
-            try db.execute(
-                sql: """
-                    INSERT INTO password_entries (
-                        id,
-                        accountName,
-                        password,
-                        createdAt
-                    )
-                    VALUES (?, ?, ?, ?)
-                """,
-                arguments: [
-                    entry.id,
-                    entry.accountName,
-                    entry.password,
-                    entry.createdAt.timeIntervalSince1970
-                ]
-            )
+            try Self.insert(entry, in: db)
+        }
+    }
+
+    func importPasswords(_ entries: [PasswordEntry]) throws {
+        try dbQueue.write { db in
+            for entry in entries {
+                try Self.insert(entry, in: db)
+            }
         }
     }
 
@@ -65,5 +58,27 @@ final class PasswordVaultRepository {
                 arguments: [id]
             )
         }
+    }
+
+    static func insert(_ entry: PasswordEntry, in db: Database) throws {
+        try db.execute(
+            sql: """
+                INSERT INTO password_entries (
+                    id,
+                    accountName,
+                    username,
+                    password,
+                    createdAt
+                )
+                VALUES (?, ?, ?, ?, ?)
+            """,
+            arguments: [
+                entry.id,
+                entry.accountName,
+                entry.username,
+                entry.password,
+                entry.createdAt.timeIntervalSince1970
+            ]
+        )
     }
 }

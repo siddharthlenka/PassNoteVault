@@ -57,7 +57,7 @@ struct WelcomeView: View {
                     )
 
                     AppButton(
-                        title: "Import Encrypted Backup later",
+                        title: "Restore From Backup",
                         systemImage: "tray.and.arrow.down",
                         kind: .secondary,
                         action: onImportBackup

@@ -89,6 +89,20 @@ final class VaultDatabase {
         }
     }
 
+    func changeMasterPassword(currentPassword: String, newPassword: String) throws {
+        var vaultKey = try recoverVaultKey(masterPassword: currentPassword)
+
+        defer {
+            vaultKey.resetBytes(in: 0..<vaultKey.count)
+        }
+
+        let envelope = try VaultKeyEnvelope.create(
+            masterPassword: newPassword,
+            vaultKey: vaultKey
+        )
+        try VaultKeyEnvelopeStore.shared.save(envelope)
+    }
+
     func close() {
         dbQueue = nil
     }
@@ -193,10 +207,24 @@ final class VaultDatabase {
                 CREATE TABLE IF NOT EXISTS password_entries (
                     id TEXT PRIMARY KEY NOT NULL,
                     accountName TEXT NOT NULL,
+                    username TEXT,
                     password TEXT NOT NULL,
                     createdAt DOUBLE NOT NULL
                 )
             """)
+
+            let passwordColumns = try Row.fetchAll(db, sql: "PRAGMA table_info(password_entries)")
+            let hasUsernameColumn = passwordColumns.contains { row in
+                let columnName: String = row["name"]
+                return columnName == "username"
+            }
+
+            if !hasUsernameColumn {
+                try db.execute(sql: """
+                    ALTER TABLE password_entries
+                    ADD COLUMN username TEXT
+                """)
+            }
 
             try db.execute(sql: """
                 CREATE TABLE IF NOT EXISTS secure_notes (

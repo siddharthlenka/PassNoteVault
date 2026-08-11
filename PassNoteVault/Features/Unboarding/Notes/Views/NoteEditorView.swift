@@ -65,15 +65,10 @@ struct NoteEditorView: View {
         .onDisappear {
             autosaveTask?.cancel()
 
-            viewModel.saveNoteContent(
-                noteID: note.id,
-                content: content
-            )
-
-            viewModel.deleteNoteIfEmpty(
-                noteID: note.id,
-                content: content
-            )
+            commitCurrentContent()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .passNoteShouldAutosaveSensitiveEditors)) { _ in
+            commitCurrentContent()
         }
     }
 
@@ -94,5 +89,17 @@ struct NoteEditorView: View {
                 )
             }
         }
+    }
+
+    private func commitCurrentContent() {
+        viewModel.saveNoteContent(
+            noteID: note.id,
+            content: content
+        )
+
+        viewModel.deleteNoteIfEmpty(
+            noteID: note.id,
+            content: content
+        )
     }
 }
