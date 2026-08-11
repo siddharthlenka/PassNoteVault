@@ -28,7 +28,7 @@ struct PasswordImportView: View {
                         .font(AppTheme.Typography.title)
                         .foregroundStyle(AppTheme.Colors.primaryText)
 
-                    Text("Import an encrypted Pass & Note password package.")
+                    Text("Import an encrypted Pass&Note Vault password package.")
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(AppTheme.Colors.secondaryText)
                 }

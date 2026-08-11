@@ -19,7 +19,7 @@ final class PasswordVaultRepository {
     func fetchPasswords() throws -> [PasswordEntry] {
         try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: """
-                SELECT id, accountName, password, createdAt
+                SELECT id, accountName, username, password, createdAt
                 FROM password_entries
                 ORDER BY createdAt DESC
             """)
@@ -28,9 +28,10 @@ final class PasswordVaultRepository {
         }
     }
 
-    func insertPassword(accountName: String, password: String) throws {
+    func insertPassword(accountName: String, username: String?, password: String) throws {
         let entry = PasswordEntry(
             accountName: accountName,
+            username: username,
             password: password
         )
 
@@ -65,14 +66,16 @@ final class PasswordVaultRepository {
                 INSERT INTO password_entries (
                     id,
                     accountName,
+                    username,
                     password,
                     createdAt
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
             """,
             arguments: [
                 entry.id,
                 entry.accountName,
+                entry.username,
                 entry.password,
                 entry.createdAt.timeIntervalSince1970
             ]

@@ -23,7 +23,7 @@ enum ImportDecryptionError: Error, LocalizedError {
         case .fileTooLarge:
             return "This backup file is too large to import."
         case .invalidContainer:
-            return "This is not a valid Pass & Note backup file."
+            return "This is not a valid Pass&Note Vault backup file."
         case .unsupportedVersion:
             return "This backup was created with an unsupported export format."
         case .unsupportedContentType:

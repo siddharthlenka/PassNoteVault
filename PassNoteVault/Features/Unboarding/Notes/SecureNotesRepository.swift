@@ -49,11 +49,23 @@ final class SecureNotesRepository {
         }
     }
 
-    func updateNoteContent(noteID: String, content: String) throws {
+    func updateNoteContent(noteID: String, content: String) throws -> Bool {
         let autoTitle = SecureNoteTitleBuilder.makeTitle(from: content)
         let updatedAt = Date().timeIntervalSince1970
 
-        try dbQueue.write { db in
+        return try dbQueue.write { db in
+            let oldContent: String = try String.fetchOne(
+                db,
+                sql: """
+                    SELECT content
+                    FROM secure_notes
+                    WHERE id = ?
+                """,
+                arguments: [noteID]
+            ) ?? ""
+            let wasEmpty = oldContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let isNowNonEmpty = !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
             try db.execute(
                 sql: """
                     UPDATE secure_notes
@@ -73,6 +85,8 @@ final class SecureNotesRepository {
                     noteID
                 ]
             )
+
+            return wasEmpty && isNowNonEmpty
         }
     }
 

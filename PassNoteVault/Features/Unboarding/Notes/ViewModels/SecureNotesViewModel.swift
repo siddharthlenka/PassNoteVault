@@ -91,7 +91,10 @@ final class SecureNotesViewModel: ObservableObject {
         }
 
         do {
-            try repository.updateNoteContent(noteID: noteID, content: content)
+            let didCreateContent = try repository.updateNoteContent(noteID: noteID, content: content)
+            if didCreateContent {
+                VaultSettingsMetadata.markNotesAdded()
+            }
             notes = try repository.fetchNotes()
             errorMessage = nil
             successMessage = nil
@@ -168,6 +171,7 @@ final class SecureNotesViewModel: ObservableObject {
 
         do {
             try repository.importNotes(importedNotes)
+            VaultSettingsMetadata.markNotesAdded(count: importedNotes.count)
             notes = try repository.fetchNotes()
             errorMessage = nil
             successMessage = "\(importedNotes.count) notes imported."

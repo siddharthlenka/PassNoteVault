@@ -121,7 +121,9 @@ struct PasswordExportView: View {
             contentType: .passNoteEncryptedExport,
             defaultFilename: exportFilename
         ) { result in
-            if case .failure = result {
+            if case .success = result {
+                dismiss()
+            } else {
                 errorMessage = "The password export could not be saved."
             }
         }
@@ -161,7 +163,7 @@ struct PasswordExportView: View {
                                 .font(AppTheme.Typography.callout.weight(.semibold))
                                 .foregroundStyle(AppTheme.Colors.primaryText)
 
-                            Text("Password will be included in encrypted export")
+                            Text(passwordExportSubtitle(for: entry))
                                 .font(AppTheme.Typography.caption)
                                 .foregroundStyle(AppTheme.Colors.secondaryText)
                         }
@@ -229,6 +231,14 @@ struct PasswordExportView: View {
         } else {
             selectedIDs = Set(entries.map(\.id))
         }
+    }
+
+    private func passwordExportSubtitle(for entry: PasswordEntry) -> String {
+        guard let username = entry.username, !username.isEmpty else {
+            return "Password will be included in encrypted export"
+        }
+
+        return username
     }
 
     private func prepareExport(masterPassword: String) -> String? {

@@ -28,6 +28,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3C818F7E302B2B7800397A76 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = InfoPlist.strings; sourceTree = "<group>"; };
 		3C88614B2FD9C05B0042AC4A /* PassNoteVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PassNoteVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C8861582FD9C05E0042AC4A /* PassNoteVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PassNoteVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C8861622FD9C05E0042AC4A /* PassNoteVaultUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PassNoteVaultUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -80,6 +81,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3C818F7C302B2B7400397A76 /* en.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				3C818F7D302B2B7800397A76 /* InfoPlist.strings */,
+			);
+			path = en.lproj;
+			sourceTree = "<group>";
+		};
 		3C8861422FD9C05A0042AC4A = {
 			isa = PBXGroup;
 			children = (
@@ -89,6 +98,7 @@
 				3C88614C2FD9C05B0042AC4A /* Products */,
 				B6266493BD8869032FE24446 /* Pods */,
 				BCB6083084CF469DB4C05CAB /* Frameworks */,
+				3C818F7C302B2B7400397A76 /* en.lproj */,
 			);
 			sourceTree = "<group>";
 		};
@@ -337,6 +347,17 @@
 		};
 /* End PBXTargetDependency section */
 
+/* Begin PBXVariantGroup section */
+		3C818F7D302B2B7800397A76 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				3C818F7E302B2B7800397A76 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
 		3C88616A2FD9C05E0042AC4A /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -473,6 +494,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pass&Note Vault";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to unlock your encrypted Pass & Note vault.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -521,6 +543,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pass&Note Vault";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Use Face ID to unlock your encrypted Pass & Note vault.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

@@ -15,11 +15,13 @@ enum ExportContentType: String, Codable {
 
 struct PasswordExportDTO: Codable {
     let accountName: String
+    let username: String?
     let password: String
     let createdAt: Date
 
     nonisolated init(entry: PasswordEntry) {
         accountName = entry.accountName
+        username = entry.username
         password = entry.password
         createdAt = entry.createdAt
     }

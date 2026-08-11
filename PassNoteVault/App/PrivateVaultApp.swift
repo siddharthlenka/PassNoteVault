@@ -7,8 +7,11 @@
 
 
 import SwiftUI
+import UIKit
 
 struct VaultRootView: View {
+    @Environment(\.scenePhase) private var scenePhase
+
     @AppStorage(VaultLifecycleMetadata.hasCreatedVaultKey) private var hasCreatedVault = false
     @AppStorage(VaultLifecycleMetadata.vaultHasBeenActivatedKey) private var vaultHasBeenActivated = true
     @AppStorage(VaultLifecycleMetadata.activationMetadataInitializedKey) private var activationMetadataInitialized = false
@@ -18,12 +21,37 @@ struct VaultRootView: View {
     @State private var unlockSuccessMessage: String?
     @State private var unlockSessionID = UUID()
     @State private var isShowingUnusedVaultRestore = false
+    @State private var isShowingPrivacyShield = false
+    @State private var isAuthenticatingForegroundUnlock = false
+    @State private var didEnterBackgroundSinceShield = false
 
     private var canStartOverUnusedVault: Bool {
         hasCreatedVault && activationMetadataInitialized && !vaultHasBeenActivated
     }
 
     var body: some View {
+        ZStack {
+            rootContent
+
+            if isShowingPrivacyShield {
+                PrivacyShieldView()
+                    .transition(.opacity)
+            }
+        }
+        .onChange(of: scenePhase) { newPhase in
+            handleScenePhaseChange(newPhase)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataDidBecomeAvailableNotification)) { _ in
+            guard scenePhase == .active else {
+                return
+            }
+
+            handleReturnToForeground()
+        }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
         if isUnlocked {
             VaultLandingView(
                 onLockVault: {
@@ -102,7 +130,7 @@ struct VaultRootView: View {
     private func unlockWithBiometrics() async -> String? {
         do {
             var vaultKey = try await BiometricVaultKeyService.shared.unlockVaultKey(
-                reason: "Unlock Pass & Note"
+                reason: "Unlock Pass&Note Vault"
             )
 
             defer {
@@ -145,5 +173,101 @@ struct VaultRootView: View {
         } catch {
             return "The master password could not be verified. Biometric unlock is still enabled."
         }
+    }
+
+    private func handleScenePhaseChange(_ newPhase: ScenePhase) {
+        switch newPhase {
+        case .active:
+            handleReturnToForeground()
+
+        case .inactive:
+            guard isUnlocked else {
+                return
+            }
+
+            NotificationCenter.default.post(name: .passNoteShouldAutosaveSensitiveEditors, object: nil)
+            isShowingPrivacyShield = true
+
+        case .background:
+            guard isUnlocked else {
+                return
+            }
+
+            NotificationCenter.default.post(name: .passNoteShouldAutosaveSensitiveEditors, object: nil)
+            ClipboardHelper.clearCopiedPasswordWhenBackgrounded()
+            VaultSettingsMetadata.recordBackgroundDate()
+            didEnterBackgroundSinceShield = true
+            isShowingPrivacyShield = true
+
+        @unknown default:
+            break
+        }
+    }
+
+    private func handleReturnToForeground() {
+        guard isUnlocked, isShowingPrivacyShield else {
+            isShowingPrivacyShield = false
+            didEnterBackgroundSinceShield = false
+            return
+        }
+
+        guard didEnterBackgroundSinceShield else {
+            isShowingPrivacyShield = false
+            return
+        }
+
+        guard UIApplication.shared.isProtectedDataAvailable else {
+            return
+        }
+
+        let duration = VaultSettingsMetadata.autoLockDuration
+        let elapsed = VaultSettingsMetadata.lastBackgroundDate.map { Date().timeIntervalSince($0) } ?? 0
+
+        guard elapsed >= duration.threshold else {
+            isShowingPrivacyShield = false
+            didEnterBackgroundSinceShield = false
+            return
+        }
+
+        guard biometricQuickUnlockEnabled && BiometricVaultKeyService.shared.isEnabled else {
+            lockVaultForMasterPassword()
+            return
+        }
+
+        authenticateForegroundUnlock()
+    }
+
+    private func authenticateForegroundUnlock() {
+        guard !isAuthenticatingForegroundUnlock else {
+            return
+        }
+
+        isAuthenticatingForegroundUnlock = true
+
+        Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+
+            let message = await unlockWithBiometrics()
+
+            await MainActor.run {
+                isAuthenticatingForegroundUnlock = false
+
+                if message == nil {
+                    isShowingPrivacyShield = false
+                    didEnterBackgroundSinceShield = false
+                } else {
+                    lockVaultForMasterPassword()
+                }
+            }
+        }
+    }
+
+    private func lockVaultForMasterPassword() {
+        VaultDatabase.shared.close()
+        unlockSessionID = UUID()
+        unlockSuccessMessage = nil
+        isUnlocked = false
+        isShowingPrivacyShield = false
+        didEnterBackgroundSinceShield = false
     }
 }

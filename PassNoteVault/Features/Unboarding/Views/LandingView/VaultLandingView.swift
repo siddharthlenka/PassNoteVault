@@ -17,28 +17,16 @@ enum VaultHomeRoute: Hashable {
 struct VaultLandingView: View {
     let onLockVault: () -> Void
 
-    @State private var isShowingVaultExport = false
-    @State private var isShowingVaultImport = false
-    @State private var statusMessage: String?
-
     var body: some View {
         NavigationStack {
             VaultScreenContainer {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
                     headerSection
 
-                    if let statusMessage {
-                        InfoWarningCard(
-                            kind: .info,
-                            title: "Vault import",
-                            message: statusMessage
-                        )
-                    }
-
                     VStack(spacing: AppTheme.Spacing.md) {
                         NavigationLink(value: VaultHomeRoute.passwords) {
                             VaultModuleCard(
-                                icon: "person.crop.circle.badge.key",
+                                icon: "key.fill",
                                 title: "Passwords",
                                 message: "Store account names and passwords securely."
                             )
@@ -50,28 +38,6 @@ struct VaultLandingView: View {
                                 icon: "note.text",
                                 title: "Notes",
                                 message: "Create private notes inside your encrypted vault."
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            isShowingVaultImport = true
-                        } label: {
-                            VaultModuleCard(
-                                icon: "tray.and.arrow.down.fill",
-                                title: "Import Vault",
-                                message: "Add passwords and notes from an encrypted backup."
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            isShowingVaultExport = true
-                        } label: {
-                            VaultModuleCard(
-                                icon: "lock.doc.fill",
-                                title: "Export Vault",
-                                message: "Create an encrypted backup of all passwords and notes."
                             )
                         }
                         .buttonStyle(.plain)
@@ -106,16 +72,10 @@ struct VaultLandingView: View {
                     SecuritySettingsView()
                 }
             }
+            .navigationTitle("Vault")
+            .navigationBarTitleDisplayMode(.inline)
         }
         .tint(AppTheme.Colors.accent)
-        .sheet(isPresented: $isShowingVaultExport) {
-            VaultExportView()
-        }
-        .sheet(isPresented: $isShowingVaultImport) {
-            VaultImportView {
-                statusMessage = "Vault data imported successfully."
-            }
-        }
     }
 
     private var headerSection: some View {

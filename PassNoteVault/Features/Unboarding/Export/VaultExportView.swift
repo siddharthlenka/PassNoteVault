@@ -10,6 +10,8 @@ import SwiftUI
 struct VaultExportView: View {
     @Environment(\.dismiss) private var dismiss
 
+    var onFullBackupCompleted: (() -> Void)?
+
     @State private var passwords: [PasswordEntry] = []
     @State private var notes: [SecureNote] = []
     @State private var errorMessage: String?
@@ -100,7 +102,12 @@ struct VaultExportView: View {
             contentType: .passNoteEncryptedExport,
             defaultFilename: exportFilename
         ) { result in
-            if case .failure = result {
+            switch result {
+            case .success:
+                VaultSettingsMetadata.markFullBackupCompleted()
+                onFullBackupCompleted?()
+                dismiss()
+            case .failure:
                 errorMessage = "The vault export could not be saved."
             }
         }

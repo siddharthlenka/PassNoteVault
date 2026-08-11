@@ -12,11 +12,12 @@ struct AddPasswordView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var accountName = ""
+    @State private var username = ""
     @State private var password = ""
     @State private var selectedLength: GeneratedPasswordLength = .thirtyTwo
     @State private var didCopyGeneratedPassword = false
 
-    let onSave: (_ accountName: String, _ password: String) -> Void
+    let onSave: (_ accountName: String, _ username: String?, _ password: String) -> Void
 
     private var canSave: Bool {
         !accountName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -37,6 +38,12 @@ struct AddPasswordView: View {
                             title: "Account name",
                             placeholder: "Example: Gmail, Instagram, GitHub",
                             text: $accountName
+                        )
+
+                        AppTextField(
+                            title: "Username (optional)",
+                            placeholder: "Email, handle, or login ID",
+                            text: $username
                         )
 
                         AppSecureField(
@@ -134,8 +141,11 @@ struct AddPasswordView: View {
                 systemImage: "checkmark",
                 isEnabled: canSave
             ) {
+                let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+
                 onSave(
                     accountName.trimmingCharacters(in: .whitespacesAndNewlines),
+                    trimmedUsername.isEmpty ? nil : trimmedUsername,
                     password
                 )
                 dismiss()

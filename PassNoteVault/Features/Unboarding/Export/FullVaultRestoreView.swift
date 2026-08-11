@@ -34,7 +34,7 @@ struct FullVaultRestoreView: View {
                         .font(AppTheme.Typography.title)
                         .foregroundStyle(AppTheme.Colors.primaryText)
 
-                    Text("Restore a full encrypted Pass & Note backup into a new local vault.")
+                    Text("Restore a full encrypted Pass&Note Vault backup into a new local vault.")
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(AppTheme.Colors.secondaryText)
                 }
@@ -108,7 +108,7 @@ struct FullVaultRestoreView: View {
 
     private func restoreSummary(_ summary: VaultImportSummary) -> some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
-            Text("Restore Pass & Note Backup")
+            Text("Restore Pass&Note Vault Backup")
                 .font(AppTheme.Typography.headline)
                 .foregroundStyle(AppTheme.Colors.primaryText)
 

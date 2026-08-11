@@ -62,12 +62,14 @@ enum ImportSupport {
 
     nonisolated static func passwordEntry(from dto: PasswordExportDTO) throws -> PasswordEntry {
         let accountName = dto.accountName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let username = dto.username?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !accountName.isEmpty, !dto.password.isEmpty else {
             throw ImportDecryptionError.invalidPayload
         }
 
         return PasswordEntry(
             accountName: accountName,
+            username: username?.isEmpty == true ? nil : username,
             password: dto.password,
             createdAt: dto.createdAt
         )
@@ -111,6 +113,9 @@ enum ImportSupport {
                 try SecureNotesRepository.insert(note, in: db)
             }
         }
+
+        VaultSettingsMetadata.markPasswordsAdded(count: passwords.count)
+        VaultSettingsMetadata.markNotesAdded(count: notes.count)
     }
 
     static func plaintextImportedNote(from data: Data) throws -> SecureNote {
